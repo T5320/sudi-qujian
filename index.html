@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>速取快递 · 送货员端</title>
+    <style>
+        :root {
+            --primary: #4A90D9;
+            --primary-dark: #3A7BC8;
+            --primary-light: #E8F1FB;
+            --bg: #F5F5F5;
+            --card: #FFFFFF;
+            --text: #333333;
+            --text-secondary: #999999;
+            --border: #EEEEEE;
+            --danger: #FA5151;
+            --warning: #FFC300;
+            --tab-height: 56px;
+            --safe-bottom: env(safe-area-inset-bottom, 8px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── App Container ── */
+        .app {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+        }
+
+        /* ── Pages Container ── */
+        .pages { flex: 1; overflow: hidden; position: relative; }
+        .page {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 16px 16px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .page.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+            z-index: 1;
+        }
+        .page::-webkit-scrollbar { display: none; }
+
+        /* ── Header ── */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--primary);
+            color: #fff;
+            padding: 12px 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin: 0 -16px 12px;
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn:active { transform: scale(0.96); opacity: 0.85; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+        .btn-warning { background: var(--warning); color: #333; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-success { background: #07C160; color: #fff; }
+        .btn-block { display: flex; width: 100%; }
+        .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
+        .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 10px; }
+        .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+        /* ── Bottom Tab Bar ── */
+        .tab-bar {
+            display: flex;
+            height: var(--tab-height);
+            background: #fff;
+            border-top: 1px solid var(--border);
+            padding-bottom: var(--safe-bottom);
+            flex-shrink: 0;
+        }
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            position: relative;
+        }
+        .tab-item.active { color: var(--primary); }
+        .tab-icon { font-size: 22px; line-height: 1; }
+        .tab-label { font-size: 11px; }
+        .tab-badge {
+            position: absolute;
+            top: 4px;
+            right: 50%;
+            transform: translateX(22px);
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            min-width: 18px;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            border-radius: 9px;
+            padding: 0 5px;
+        }
+
+        /* ══════ 首页（送货员端） ══════ */
+        .hero-section {
+            background: linear-gradient(135deg, #4A90D9, #3A7BC8);
+            border-radius: 14px;
+            padding: 22px 10px;
+            margin-bottom: 14px;
+            color: #fff;
+            text-align: center;
+        }
+        .hero-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .hero-sub { font-size: 13px; opacity: 0.85; margin-bottom: 14px; }
+        .hero-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+        }
+        .hero-stat { text-align: center; }
+        .hero-stat-num { font-size: 24px; font-weight: 700; }
+        .hero-stat-label { font-size: 11px; opacity: 0.8; }
+
+        .notice-bar {
+            background: #E8F1FB;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .notice-bar.urgent {
+            background: #FFF0F0;
+            color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* ── Station Filter Tabs ── */
+        .filter-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .filter-tab {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-tab.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .filter-tab:active { transform: scale(0.95); }
+
+        /* ══════ 订单卡片 ══════ */
+        .order-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+        .order-card.urgent-red {
+            border-left: 4px solid var(--danger);
+        }
+        .order-card.urgent-yellow {
+            border-left: 4px solid var(--warning);
+        }
+        .order-card.urgent-safe {
+            border-left: 4px solid var(--primary);
+        }
+        .order-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .order-station {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .order-status-badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .status-pending { background: #FFF3E0; color: #E67E22; }
+        .status-accepted { background: var(--primary-light); color: var(--primary); }
+        .status-picked { background: #E8F8EE; color: #07C160; }
+        .status-completed { background: #F0F0F0; color: #999; }
+
+        .order-info-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .order-info-row .label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            min-width: 48px;
+        }
+        .order-code {
+            font-family: "Courier New", monospace;
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 2px;
+            color: var(--primary);
+        }
+
+        .order-address {
+            background: #F9FAFB;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 8px 0;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .order-address .addr-icon { font-size: 18px; flex-shrink: 0; }
+        .order-address .addr-text { line-height: 1.5; }
+        .order-address .addr-name { font-weight: 600; }
+
+        .order-deadline {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .order-deadline.red { color: var(--danger); }
+        .order-deadline.yellow { color: #D4A017; }
+        .order-deadline.green { color: #07C160; }
+
+        .order-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Photo preview */
+        .photo-preview {
+            margin-top: 8px;
+        }
+        .photo-preview img {
+            max-width: 120px;
+            max-height: 120px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            object-fit: cover;
+        }
+
+        /* Weight judgment */
+        .weight-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .weight-note {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ── 用户订单堆叠组 ── */
+        .user-order-group {
+            background: var(--card);
+            border-radius: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 14px 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .group-header:active { background: #F8F9FA; }
+        .group-addr-icon { font-size: 20px; flex-shrink: 0; }
+        .group-addr-text { flex: 1; min-width: 0; }
+        .group-addr-name { font-weight: 600; font-size: 14px; }
+        .group-addr-detail { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .group-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+        .group-toggle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: transform 0.25s;
+            flex-shrink: 0;
+        }
+        .group-toggle.expanded { transform: rotate(180deg); }
+
+        .group-orders {
+            transition: max-height 0.3s ease;
+            overflow: hidden;
+        }
+        .group-orders.collapsed {
+            max-height: 0;
+        }
+        .group-orders.expanded {
+            max-height: 2000px;
+        }
+
+        .order-card-stacked {
+            padding: 10px 14px 14px;
+            border-top: 1px solid var(--border);
+            position: relative;
+        }
+        .order-card-stacked:first-child { border-top: none; }
+        .order-card-stacked .order-header { margin-bottom: 6px; }
+        .order-card-stacked .order-info-row { font-size: 12px; margin-bottom: 2px; }
+        .order-card-stacked .order-code { font-size: 14px; }
+        .order-card-stacked .order-address { display: none; }
+        .order-card-stacked .order-actions { margin-top: 6px; }
+        .order-card-stacked .photo-preview img { max-width: 80px; max-height: 80px; }
+
+        .group-collapsed-preview {
+            padding: 6px 14px 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .group-collapsed-preview .preview-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .group-collapsed-preview .preview-text {
+            font-size: 13px;
+            color: var(--text);
+        }
+        .group-collapsed-preview .urgency-tag {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .urgency-tag.red { background: #FFE8E8; color: var(--danger); }
+        .urgency-tag.yellow { background: #FFF8E1; color: #D4A017; }
+        .urgency-tag.green { background: #E8F8EE; color: #07C160; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-icon { font-size: 60px; margin-bottom: 12px; }
+
+        /* ══════ 我的（钱包） ══════ */
+        .profile-header {
+            background: linear-gradient(135deg, #4A90D9, #3A7BC8);
+            border-radius: 14px;
+            padding: 24px 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .avatar {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            flex-shrink: 0;
+        }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 18px; font-weight: 700; }
+        .profile-role { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+        .wallet-card {
+            background: linear-gradient(135deg, #4A90D9, #3A7BC8);
+            border-radius: 14px;
+            padding: 20px;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .wallet-label { font-size: 13px; opacity: 0.85; }
+        .wallet-balance { font-size: 42px; font-weight: 800; margin: 6px 0; }
+        .wallet-unit { font-size: 18px; font-weight: 400; }
+        .wallet-sub { font-size: 12px; opacity: 0.7; }
+
+        .withdraw-btn-wrap { margin-top: 12px; }
+
+        /* Earnings list */
+        .earnings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .earnings-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .earnings-item:last-child { border-bottom: none; }
+        .earnings-icon {
+            width: 40px; height: 40px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .earnings-info { flex: 1; min-width: 0; }
+        .earnings-title { font-size: 14px; font-weight: 600; }
+        .earnings-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .earnings-amount { font-size: 16px; font-weight: 700; color: var(--primary); text-align: right; flex-shrink: 0; }
+
+        .total-summary {
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .total-summary-label { font-size: 14px; font-weight: 600; color: var(--text); }
+        .total-summary-amount { font-size: 22px; font-weight: 800; color: var(--primary); }
+
+        .section-divider {
+            height: 8px;
+            background: var(--bg);
+            margin: 12px -16px;
+        }
+
+        /* ── 弹窗 ── */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            width: 300px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.25s;
+        }
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-icon { font-size: 50px; margin-bottom: 10px; }
+        .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(0,0,0,0.78);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+        /* ── Pop-in animation ── */
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop { animation: pop-in 0.35s ease-out; }
+
+        /* ── Responsive: center on desktop ── */
+        @media screen and (min-width: 450px) {
+            .app {
+                max-width: 450px;
+                margin: 0 auto;
+                box-shadow: 0 0 30px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <!-- Pages -->
+    <div class="pages" id="pages">
+
+        <!-- ══════════ 首页 ══════════ -->
+        <div class="page active" id="page-home">
+            <div class="hero-section">
+                <div class="hero-title">速取快递 · 送货员端</div>
+                <div class="hero-sub">高效接单 · 即时配送 · 轻松赚钱</div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-num" id="stat-today">0</div>
+                        <div class="hero-stat-label">今日订单</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-num" id="stat-pending">0</div>
+                        <div class="hero-stat-label">待接单</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-num" id="stat-wallet">0</div>
+                        <div class="hero-stat-label">收益(元)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="notice-bar" id="home-notice">
+                <span>📡</span>
+                <span>新订单实时刷新中，请留意接单</span>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🏪 按驿站筛选</div>
+                <div class="filter-tabs" id="home-filter-tabs"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span>📋 最新订单</span>
+                    <span style="font-size:12px;color:var(--text-secondary);font-weight:400;" id="home-order-count">共 0 条</span>
+                </div>
+                <div id="home-order-preview"></div>
+            </div>
+        </div>
+
+        <!-- ══════════ 订单管理 ══════════ -->
+        <div class="page" id="page-orders">
+            <div class="header">📋 订单管理</div>
+
+            <div class="card">
+                <div class="card-title">🏪 驿站筛选</div>
+                <div class="filter-tabs" id="order-filter-tabs"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span>📦 订单列表</span>
+                    <span style="font-size:12px;color:var(--text-secondary);font-weight:400;" id="order-count">共 0 条</span>
+                </div>
+                <div id="order-list"></div>
+            </div>
+        </div>
+
+        <!-- ══════════ 我的 ══════════ -->
+        <div class="page" id="page-profile">
+            <div class="header">👤 我的</div>
+
+            <div class="profile-header">
+                <div class="avatar">🛵</div>
+                <div class="profile-info">
+                    <div class="profile-name">送货员</div>
+                    <div class="profile-role">速取快递 · 送货员端</div>
+                </div>
+            </div>
+
+            <div class="wallet-card">
+                <div class="wallet-label">💰 我的钱包</div>
+                <div class="wallet-balance">
+                    <span class="wallet-unit">¥</span><span id="wallet-balance">0.00</span>
+                </div>
+                <div class="wallet-sub">累计配送收入</div>
+                <div class="withdraw-btn-wrap">
+                    <button class="btn btn-lg" style="background:rgba(255,255,255,0.25);color:#fff;width:100%;" onclick="doWithdraw()">
+                        💸 提现到微信/支付宝
+                    </button>
+                </div>
+            </div>
+
+            <div class="total-summary">
+                <span class="total-summary-label">📊 累计收益</span>
+                <span class="total-summary-amount" id="total-earnings">¥0.00</span>
+            </div>
+
+            <div class="card">
+                <div class="earnings-header">
+                    <span class="card-title" style="margin-bottom:0;">📜 收益明细</span>
+                    <span style="font-size:12px;color:var(--text-secondary);" id="earnings-count">共 0 笔</span>
+                </div>
+                <div id="earnings-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ 底部导航 ══════════ -->
+    <div class="tab-bar">
+        <div class="tab-item active" data-tab="0" onclick="switchTab(0)">
+            <div class="tab-icon">🏠</div>
+            <div class="tab-label">首页</div>
+        </div>
+        <div class="tab-item" data-tab="1" onclick="switchTab(1)">
+            <div class="tab-icon">📋</div>
+            <div class="tab-label">订单管理</div>
+            <div class="tab-badge" id="tab-badge" style="display:none;">0</div>
+        </div>
+        <div class="tab-item" data-tab="2" onclick="switchTab(2)">
+            <div class="tab-icon">👤</div>
+            <div class="tab-label">我的</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 弹窗 ── -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<!-- Hidden file input for photo upload -->
+<input type="file" accept="image/*" id="photo-input" style="display:none;" onchange="handlePhotoUpload(event)">
+
+<script>
+// ═══════════════ 全局状态 ═══════════════
+const STATIONS = ['菜鸟驿站', '丰巢快递柜', '京东快递柜', '小区门卫处', '妈妈驿站', '快递超市'];
+
+let state = {
+    currentTab: 0,
+    activeStationFilter: '全部',
+    orders: [],
+    wallet: 0,
+    pendingPhotoOrderId: null // 正在等待上传照片的订单ID
+};
+
+// ═══════════════ localStorage 读写 ═══════════════
+function loadOrders() {
+    try {
+        const raw = localStorage.getItem('speedelivery_orders');
+        state.orders = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        state.orders = [];
+    }
+}
+
+function saveOrders() {
+    localStorage.setItem('speedelivery_orders', JSON.stringify(state.orders));
+}
+
+function loadWallet() {
+    try {
+        const raw = localStorage.getItem('speedelivery_delivery_wallet');
+        state.wallet = raw ? parseFloat(raw) : 0;
+    } catch (e) {
+        state.wallet = 0;
+    }
+}
+
+function saveWallet() {
+    localStorage.setItem('speedelivery_delivery_wallet', state.wallet.toString());
+}
+
+// ═══════════════ 辅助函数 ═══════════════
+function getRemainingHours(order) {
+    const deadline = order.deadline ? new Date(order.deadline) : new Date(order.createdAt + 24 * 3600 * 1000);
+    const now = new Date();
+    return Math.max(0, (deadline - now) / 3600000);
+}
+
+function getUrgencyClass(order) {
+    const hours = getRemainingHours(order);
+    if (hours < 4) return 'urgent-red';
+    if (hours < 12) return 'urgent-yellow';
+    return 'urgent-safe';
+}
+
+function getUrgencyColorClass(order) {
+    const hours = getRemainingHours(order);
+    if (hours < 4) return 'red';
+    if (hours < 12) return 'yellow';
+    return 'green';
+}
+
+function getStatusLabel(status) {
+    const map = {
+        'pending': '待接单',
+        'accepted': '已接单',
+        'picked': '已取件',
+        'completed': '已完成'
+    };
+    return map[status] || status;
+}
+
+function getStatusClass(status) {
+    const map = {
+        'pending': 'status-pending',
+        'accepted': 'status-accepted',
+        'picked': 'status-picked',
+        'completed': 'status-completed'
+    };
+    return map[status] || '';
+}
+
+function formatTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${month}/${day} ${hours}:${minutes}`;
+}
+
+function formatDeadlineCountdown(order) {
+    const hours = getRemainingHours(order);
+    const totalMinutes = Math.floor(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}时${m}分`;
+}
+
+function getTodayOrders() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return state.orders.filter(o => {
+        const d = new Date(o.createdAt);
+        return d >= today;
+    });
+}
+
+// ═══════════════ 排序 ═══════════════
+function getSortedOrders(list) {
+    return [...list].sort((a, b) => {
+        // urgency priority: red < yellow < safe
+        const urgencyOrder = { 'urgent-red': 0, 'urgent-yellow': 1, 'urgent-safe': 2 };
+        const ua = urgencyOrder[getUrgencyClass(a)] ?? 2;
+        const ub = urgencyOrder[getUrgencyClass(b)] ?? 2;
+        if (ua !== ub) return ua - ub;
+        // then by creation time (newest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+}
+
+function getFilteredOrders() {
+    let list = state.orders;
+    if (state.activeStationFilter !== '全部') {
+        list = list.filter(o => o.station === state.activeStationFilter);
+    }
+    return getSortedOrders(list);
+}
+
+// ═══════════════ 页面切换 ═══════════════
+function switchTab(index) {
+    state.currentTab = index;
+    const pages = ['page-home', 'page-orders', 'page-profile'];
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pages[index]).classList.add('active');
+    document.querySelectorAll('.tab-item').forEach((t, i) => t.classList.toggle('active', i === index));
+
+    if (index === 0) renderHome();
+    if (index === 1) renderOrders();
+    if (index === 2) renderProfile();
+}
+
+// ═══════════════ 筛选器切换 ═══════════════
+function setStationFilter(station) {
+    state.activeStationFilter = station;
+    renderHome();
+    renderOrders();
+}
+
+// ═══════════════ 首页 ═══════════════
+function renderHome() {
+    const todayOrders = getTodayOrders();
+    const pendingCount = state.orders.filter(o => o.status === 'pending').length;
+
+    document.getElementById('stat-today').textContent = todayOrders.length;
+    document.getElementById('stat-pending').textContent = pendingCount;
+    document.getElementById('stat-wallet').textContent = state.wallet.toFixed(2);
+
+    // Notice bar with urgency
+    const noticeEl = document.getElementById('home-notice');
+    if (pendingCount > 0) {
+        noticeEl.className = 'notice-bar urgent';
+        noticeEl.innerHTML = '<span>🔔</span><span>有 <b>' + pendingCount + '</b> 个新订单等待接单！</span>';
+    } else {
+        noticeEl.className = 'notice-bar';
+        noticeEl.innerHTML = '<span>📡</span><span>新订单实时刷新中，请留意接单</span>';
+    }
+
+    // Filter tabs
+    const homeFilterHtml = buildFilterTabs('home-filter-tabs');
+    document.getElementById('home-filter-tabs').innerHTML = homeFilterHtml;
+
+    // Order preview (top 5)
+    const filtered = getFilteredOrders();
+    const previewOrders = filtered.slice(0, 5);
+    document.getElementById('home-order-count').textContent = '共 ' + filtered.length + ' 条';
+    document.getElementById('home-order-preview').innerHTML =
+        previewOrders.length === 0
+            ? '<div class="empty-state"><div class="empty-icon">📭</div><div>暂无订单</div></div>'
+            : previewOrders.map(o => buildOrderCard(o, true)).join('');
+
+    // Tab badge
+    updateTabBadge();
+}
+
+function buildFilterTabs(containerId) {
+    let html = '<div class="filter-tab' + (state.activeStationFilter === '全部' ? ' active' : '') + '" onclick="setStationFilter(\'全部\')">全部</div>';
+    STATIONS.forEach(s => {
+        html += '<div class="filter-tab' + (state.activeStationFilter === s ? ' active' : '') + '" onclick="setStationFilter(\'' + s + '\')">' + s + '</div>';
+    });
+    return html;
+}
+
+// ═══════════════ 订单管理 ═══════════════
+function renderOrders() {
+    document.getElementById('order-filter-tabs').innerHTML = buildFilterTabs('order-filter-tabs');
+
+    const filtered = getFilteredOrders();
+    document.getElementById('order-count').textContent = '共 ' + filtered.length + ' 条';
+
+    const listEl = document.getElementById('order-list');
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>暂无订单</div></div>';
+    } else {
+        // 按用户地址分组
+        const groups = groupOrdersByUser(filtered);
+        listEl.innerHTML = Array.from(groups.entries()).map(([key, orders]) =>
+            buildUserOrderGroup(key, orders)
+        ).join('');
+    }
+
+    updateTabBadge();
+}
+
+// ═══════════════ 按用户地址分组 ═══════════════
+function groupOrdersByUser(orders) {
+    const map = new Map();
+    orders.forEach(o => {
+        const addr = o.address || {};
+        const key = (addr.name || '未知') + '|' + (addr.phone || '') + '|' + (addr.detail || '');
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(o);
+    });
+    return map;
+}
+
+// ═══════════════ 用户订单堆叠组 ═══════════════
+function buildUserOrderGroup(key, orders) {
+    const addr = orders[0].address || {};
+    const userName = addr.name || '未知用户';
+    const addrDetail = addr.detail || '地址未填写';
+    const phone = addr.phone || '';
+    const count = orders.length;
+    const groupId = 'group-' + key.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+
+    // 按状态排序: pending > accepted > picked > completed
+    const statusOrder = { pending: 0, accepted: 1, picked: 2, completed: 3 };
+    orders.sort((a, b) => (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0));
+
+    // 折叠预览：显示最紧急的信息
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    const mostUrgent = orders.reduce((prev, curr) => {
+        const prevH = getRemainingHours(prev);
+        const currH = getRemainingHours(curr);
+        return currH < prevH ? curr : prev;
+    }, orders[0]);
+    const urgentHours = getRemainingHours(mostUrgent);
+    let urgentColor = 'green';
+    if (urgentHours < 4) urgentColor = 'red';
+    else if (urgentHours < 12) urgentColor = 'yellow';
+
+    let previewHtml = '';
+    if (count > 1) {
+        previewHtml = '<div class="group-collapsed-preview">' +
+            '<span class="preview-dot" style="background:' + (urgentColor === 'red' ? 'var(--danger)' : urgentColor === 'yellow' ? 'var(--warning)' : 'var(--primary)') + ';"></span>' +
+            '<span class="preview-text">' + count + ' 个快递' +
+            (pendingCount > 0 ? ' · <b>' + pendingCount + '个待接单</b>' : '') +
+            '</span>' +
+            '<span class="urgency-tag ' + urgentColor + '">最急剩余 ' + Math.floor(urgentHours) + 'h</span>' +
+            '</div>';
+    }
+
+    // 构建堆叠订单
+    const stackedCards = orders.map(o => {
+        const urgencyCls = getUrgencyClass(o);
+        const urgencyColorCls = getUrgencyColorClass(o);
+        const countdown = formatDeadlineCountdown(o);
+        const statusCls = getStatusClass(o.status);
+        const statusLabel = getStatusLabel(o.status);
+
+        let actionsHtml = '';
+        if (o.status === 'pending') {
+            actionsHtml = '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();acceptOrder(\'' + o.id + '\')">📥 接单</button>';
+        }
+        if (o.status === 'accepted') {
+            actionsHtml = '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();triggerPhotoUpload(\'' + o.id + '\')">📸 拍照上传</button>';
+        }
+        if (o.status === 'picked') {
+            actionsHtml = '<div class="weight-buttons">' +
+                '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();setWeight(\'' + o.id + '\', 1)">📦 小件 (&lt; 2.5kg)</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();setWeight(\'' + o.id + '\', 2.5)">📦 大件 (≥ 2.5kg)</button>' +
+                '</div>' +
+                '<div class="weight-note">2.5千克以下为1元，2.5千克以上为2.5元</div>';
+        }
+
+        let photoHtml = '';
+        if (o.photoUrl) {
+            photoHtml = '<div class="photo-preview"><img src="' + o.photoUrl + '" alt="取件照片" onclick="event.stopPropagation();previewPhoto(\'' + o.photoUrl + '\')"></div>';
+        }
+
+        let deliveryFeeHtml = '';
+        if (o.deliveryFee) {
+            deliveryFeeHtml = '<div class="order-info-row"><span class="label">配送费</span><span style="color:var(--primary);font-weight:700;">¥' + o.deliveryFee.toFixed(2) + '</span></div>';
+        }
+        let adjustmentHtml = '';
+        if (o.adjustment > 0) {
+            adjustmentHtml = '<div class="order-info-row"><span class="label">补/退款</span><span style="color:var(--danger);font-weight:600;">用户需补 ¥' + o.adjustment.toFixed(2) + '</span></div>';
+        } else if (o.adjustment < 0) {
+            adjustmentHtml = '<div class="order-info-row"><span class="label">补/退款</span><span style="color:var(--primary);font-weight:600;">已退用户 ¥' + Math.abs(o.adjustment).toFixed(2) + '</span></div>';
+        }
+
+        return '<div class="order-card-stacked ' + urgencyCls + '">' +
+            '<div class="order-header">' +
+                '<div class="order-station">🏪 ' + o.station + '</div>' +
+                '<div class="order-status-badge ' + statusCls + '">' + statusLabel + '</div>' +
+            '</div>' +
+            '<div class="order-info-row"><span class="label">取件码</span><span class="order-code">' + (o.pickupCode || '--------') + '</span></div>' +
+            '<div class="order-info-row"><span class="label">包裹</span><span>' + (o.packageSize || '未知') + '</span></div>' +
+            '<div class="order-info-row"><span class="label">费用</span><span>¥' + ((o.fee || 0).toFixed(2)) + '</span></div>' +
+            deliveryFeeHtml +
+            '<div class="order-info-row"><span class="label">下单</span><span>' + formatTime(o.createdAt) + '</span></div>' +
+            '<div class="order-deadline ' + urgencyColorCls + '">⏰ 剩余 ' + countdown + '</div>' +
+            photoHtml +
+            (actionsHtml ? '<div class="order-actions">' + actionsHtml + '</div>' : '') +
+            '</div>';
+    }).join('');
+
+    return '<div class="user-order-group">' +
+        '<div class="group-header" onclick="toggleGroup(\'' + groupId + '\')">' +
+            '<span class="group-addr-icon">📍</span>' +
+            '<div class="group-addr-text">' +
+                '<div class="group-addr-name">' + userName + (phone ? ' · ' + phone : '') + '</div>' +
+                '<div class="group-addr-detail">' + addrDetail + '</div>' +
+            '</div>' +
+            '<span class="group-badge">' + count + '个快递</span>' +
+            '<span class="group-toggle" id="' + groupId + '-toggle">▼</span>' +
+        '</div>' +
+        previewHtml +
+        '<div class="group-orders expanded" id="' + groupId + '">' +
+            stackedCards +
+        '</div>' +
+        '</div>';
+}
+
+function getRemainingHours(order) {
+    if (!order.deadline) return 24;
+    const remaining = new Date(order.deadline).getTime() - Date.now();
+    return Math.max(0, remaining / 3600000);
+}
+
+function toggleGroup(groupId) {
+    const ordersEl = document.getElementById(groupId);
+    const toggleEl = document.getElementById(groupId + '-toggle');
+    if (!ordersEl || !toggleEl) return;
+    const isExpanded = ordersEl.classList.contains('expanded');
+    if (isExpanded) {
+        ordersEl.classList.remove('expanded');
+        ordersEl.classList.add('collapsed');
+        toggleEl.classList.remove('expanded');
+    } else {
+        ordersEl.classList.remove('collapsed');
+        ordersEl.classList.add('expanded');
+        toggleEl.classList.add('expanded');
+    }
+}
+
+function updateTabBadge() {
+    const pendingCount = state.orders.filter(o => o.status === 'pending').length;
+    const badge = document.getElementById('tab-badge');
+    badge.textContent = pendingCount;
+    badge.style.display = pendingCount > 0 ? '' : 'none';
+}
+
+// ═══════════════ 订单卡片 ═══════════════
+function buildOrderCard(order, isPreview) {
+    const urgencyCls = getUrgencyClass(order);
+    const urgencyColor = getUrgencyColorClass(order);
+    const countdown = formatDeadlineCountdown(order);
+    const addr = order.address || {};
+    const statusCls = getStatusClass(order.status);
+    const statusLabel = getStatusLabel(order.status);
+
+    let actionsHtml = '';
+    if (!isPreview) {
+        if (order.status === 'pending') {
+            actionsHtml = '<button class="btn btn-primary btn-sm" onclick="acceptOrder(\'' + order.id + '\')">📥 接单</button>';
+        }
+        if (order.status === 'accepted') {
+            actionsHtml = '<button class="btn btn-success btn-sm" onclick="triggerPhotoUpload(\'' + order.id + '\')">📸 拍照上传</button>';
+        }
+        if (order.status === 'picked') {
+            actionsHtml = '<div class="weight-buttons">' +
+                '<button class="btn btn-outline btn-sm" onclick="setWeight(\'' + order.id + '\', 1)">📦 小件 (&lt; 2.5kg)</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="setWeight(\'' + order.id + '\', 2.5)">📦 大件 (≥ 2.5kg)</button>' +
+                '</div>' +
+                '<div class="weight-note">2.5千克以下为1元，2.5千克以上为2.5元</div>';
+        }
+    }
+
+    let photoHtml = '';
+    if (order.photoUrl) {
+        photoHtml = '<div class="photo-preview"><img src="' + order.photoUrl + '" alt="取件照片" onclick="previewPhoto(\'' + order.photoUrl + '\')"></div>';
+    }
+
+    let deliveryFeeHtml = '';
+    if (order.deliveryFee) {
+        deliveryFeeHtml = '<div class="order-info-row"><span class="label">配送费</span><span style="color:var(--primary);font-weight:700;">¥' + order.deliveryFee.toFixed(2) + '</span></div>';
+    }
+
+    let addrHtml = '';
+    if (addr.name) {
+        addrHtml = '<div class="order-address"><span class="addr-icon">📍</span><div class="addr-text"><div class="addr-name">' + addr.name + ' · ' + (addr.phone || '') + '</div><div style="color:var(--text-secondary);font-size:12px;">' + (addr.detail || '') + '</div></div></div>';
+    }
+
+    return '<div class="order-card ' + urgencyCls + ' pop">' +
+        '<div class="order-header">' +
+            '<div class="order-station">🏪 ' + order.station + '</div>' +
+            '<div class="order-status-badge ' + statusCls + '">' + statusLabel + '</div>' +
+        '</div>' +
+        '<div class="order-info-row"><span class="label">取件码</span><span class="order-code">' + (order.pickupCode || '--------') + '</span></div>' +
+        '<div class="order-info-row"><span class="label">包裹</span><span>' + (order.packageSize || '未知') + '</span></div>' +
+        '<div class="order-info-row"><span class="label">费用</span><span>¥' + ((order.fee || 0).toFixed(2)) + '</span></div>' +
+        deliveryFeeHtml +
+        '<div class="order-info-row"><span class="label">下单</span><span>' + formatTime(order.createdAt) + '</span></div>' +
+        '<div class="order-deadline ' + urgencyColor + '">⏰ 剩余 ' + countdown + '</div>' +
+        addrHtml +
+        photoHtml +
+        (actionsHtml ? '<div class="order-actions">' + actionsHtml + '</div>' : '') +
+        '</div>';
+}
+
+// ═══════════════ 接单 ═══════════════
+function acceptOrder(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || order.status !== 'pending') return;
+
+    order.status = 'accepted';
+    saveOrders();
+    showToast('接单成功！请及时取件 📦');
+    renderCurrentTab();
+}
+
+// ═══════════════ 拍照上传 ═══════════════
+function triggerPhotoUpload(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || order.status !== 'accepted') return;
+    state.pendingPhotoOrderId = orderId;
+    document.getElementById('photo-input').click();
+}
+
+function handlePhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !state.pendingPhotoOrderId) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        const order = state.orders.find(o => o.id === state.pendingPhotoOrderId);
+        if (!order) return;
+
+        order.photoUrl = dataUrl;
+        order.status = 'picked';
+        saveOrders();
+        state.pendingPhotoOrderId = null;
+        showToast('已提醒客户快递已取件 📸');
+        renderCurrentTab();
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    event.target.value = '';
+}
+
+// ═══════════════ 重量判定（多退少补，金额自动对齐） ═══════════════
+function setWeight(orderId, deliveryFee) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || order.status !== 'picked') return;
+
+    order.deliveryFee = deliveryFee;
+    order.weightJudgment = deliveryFee === 1 ? '小件 (< 2.5kg)' : '大件 (≥ 2.5kg)';
+    order.status = 'completed';
+
+    // 用户统一预付 ¥2，实际费用 deliveryFee
+    const userPaid = order.fee || 2;
+    const netChange = deliveryFee - userPaid; // 正=钱包增收，负=需退款
+
+    if (netChange < 0) {
+        // 小件：多收的退款
+        const refundAmount = Math.abs(netChange);
+        state.wallet -= refundAmount;          // 钱包扣回
+        refundToUser(order.userId, refundAmount); // 退给用户
+        order.adjustment = -refundAmount;       // 负数=已退
+        showToast('判定为' + order.weightJudgment + '，已退款 ¥' + refundAmount.toFixed(2) + ' ✅');
+    } else if (netChange > 0) {
+        // 大件：用户需补款，钱包先不收，等用户补款后再加
+        order.adjustment = netChange;           // 正数=待补款
+        order.status = 'completed';
+        showToast('判定为' + order.weightJudgment + '，用户需补款 ¥' + netChange.toFixed(2) + ' ⚠️');
+    } else {
+        // 刚好 ¥2，不增不减
+        order.adjustment = 0;
+        showToast('配送完成！费用刚好 ¥' + deliveryFee.toFixed(2) + ' 💰');
+    }
+
+    saveWallet();
+    saveOrders();
+    renderCurrentTab();
+}
+
+// 用户补款到账（在用户端调用或手动触发）
+function confirmUserSupplement(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || !order.adjustment || order.adjustment <= 0) return;
+    const supplement = order.adjustment;
+    state.wallet += supplement;
+    order.adjustment = 0;
+    order.supplementPaid = true;
+    saveWallet();
+    saveOrders();
+    renderCurrentTab();
+    showToast('补款 ¥' + supplement.toFixed(2) + ' 已到账 💰');
+}
+
+// 退款到用户余额
+function refundToUser(userId, amount) {
+    const balanceKey = 'speedelivery_user_balance';
+    let balance = parseFloat(localStorage.getItem(balanceKey)) || 0;
+    balance += amount;
+    localStorage.setItem(balanceKey, balance.toFixed(2));
+}
+
+// ═══════════════ 照片预览 ═══════════════
+function previewPhoto(url) {
+    showModal('📸', '取件照片', '<img src="' + url + '" style="max-width:100%;max-height:300px;border-radius:8px;">', true);
+}
+
+// ═══════════════ 提现 ═══════════════
+function doWithdraw() {
+    if (state.wallet <= 0) {
+        showToast('暂无余额可提现 💰');
+        return;
+    }
+    showModal('💸', '模拟提现', '已提现 ¥' + state.wallet.toFixed(2) + ' 到微信/支付宝', false, () => {
+        state.wallet = 0;
+        saveWallet();
+        showToast('提现成功！已到账 💸');
+        renderCurrentTab();
+    });
+}
+
+// ═══════════════ 我的 ═══════════════
+function renderProfile() {
+    document.getElementById('wallet-balance').textContent = state.wallet.toFixed(2);
+    document.getElementById('total-earnings').textContent = '¥' + state.wallet.toFixed(2);
+
+    // Earnings history: completed orders
+    const completedOrders = state.orders
+        .filter(o => o.status === 'completed' && o.deliveryFee)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    document.getElementById('earnings-count').textContent = '共 ' + completedOrders.length + ' 笔';
+
+    const listEl = document.getElementById('earnings-list');
+    if (completedOrders.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>暂无收益记录</div></div>';
+    } else {
+        listEl.innerHTML = completedOrders.map(o => {
+            return '<div class="earnings-item">' +
+                '<div class="earnings-icon">📦</div>' +
+                '<div class="earnings-info">' +
+                    '<div class="earnings-title">' + o.station + ' · ' + (o.pickupCode || '--') + '</div>' +
+                    '<div class="earnings-meta">' + (o.weightJudgment || '') + ' · ' + formatTime(o.createdAt) + '</div>' +
+                '</div>' +
+                '<div class="earnings-amount">+¥' + (o.deliveryFee || 0).toFixed(2) + '</div>' +
+                '</div>';
+        }).join('');
+    }
+}
+
+// ═══════════════ 当前页渲染 ═══════════════
+function renderCurrentTab() {
+    if (state.currentTab === 0) renderHome();
+    if (state.currentTab === 1) renderOrders();
+    if (state.currentTab === 2) renderProfile();
+}
+
+// ═══════════════ 弹窗 ═══════════════
+function showModal(icon, title, desc, singleBtn, callback) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.innerHTML =
+        '<div class="modal-icon pop">' + icon + '</div>' +
+        '<div class="modal-title">' + title + '</div>' +
+        '<div class="modal-desc">' + desc + '</div>' +
+        '<div class="modal-buttons">' +
+            (singleBtn
+                ? '<button class="btn btn-primary" onclick="closeModal()">知道了</button>'
+                : '<button class="btn btn-outline" onclick="closeModal()">取消</button>' +
+                  '<button class="btn btn-primary" id="modal-confirm-btn">确认</button>'
+            ) +
+        '</div>';
+
+    overlay.classList.add('show');
+
+    if (!singleBtn && callback) {
+        document.getElementById('modal-confirm-btn').onclick = function() {
+            closeModal();
+            callback();
+        };
+    }
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ═══════════════ Toast ═══════════════
+let toastTimer;
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { toast.classList.remove('show'); }, 2000);
+}
+
+// ═══════════════ 实时轮询 ═══════════════
+let lastOrdersJson = '';
+function pollOrders() {
+    const currentJson = localStorage.getItem('speedelivery_orders') || '';
+    if (currentJson !== lastOrdersJson) {
+        lastOrdersJson = currentJson;
+        loadOrders();
+        renderCurrentTab();
+    }
+}
+
+// ═══════════════ 倒计时刷新 ═══════════════
+setInterval(function() {
+    // Refresh countdowns every 60 seconds
+    if (state.currentTab !== 2) renderCurrentTab();
+}, 60000);
+
+// ═══════════════ 初始化 ═══════════════
+function init() {
+    loadOrders();
+    loadWallet();
+    lastOrdersJson = localStorage.getItem('speedelivery_orders') || '';
+
+    renderHome();
+    renderOrders();
+    renderProfile();
+
+    // 3-second polling
+    setInterval(pollOrders, 3000);
+
+    // Modal overlay click to close
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    console.log('🚀 速取快递 · 送货员端 已就绪');
+}
+
+init();
+</script>
+</body>
+</html>

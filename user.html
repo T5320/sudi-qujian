@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>速递 - 快递代取配送</title>
+    <style>
+        :root {
+            --primary: #07C160;
+            --primary-dark: #06AD56;
+            --bg: #F5F7FA;
+            --card: #FFFFFF;
+            --text: #333333;
+            --text-secondary: #999999;
+            --border: #EEEEEE;
+            --danger: #FA5151;
+            --warning: #FF9500;
+            --success: #07C160;
+            --orange: #FF9500;
+            --tab-height: 56px;
+            --safe-bottom: env(safe-area-inset-bottom, 8px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+        }
+
+        /* ── Top Status Bar ── */
+        .status-bar {
+            height: var(--safe-top);
+            background: var(--primary);
+            flex-shrink: 0;
+        }
+
+        /* ── Pages Container ── */
+        .pages { flex: 1; overflow: hidden; position: relative; }
+        .page {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 14px 14px;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .page.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+            z-index: 1;
+        }
+        .page::-webkit-scrollbar { display: none; }
+
+        /* ── Header ── */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--primary);
+            color: #fff;
+            padding: 14px 0;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin: 0 -14px 12px;
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn:active { transform: scale(0.96); opacity: 0.85; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-block { display: flex; width: 100%; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 10px; }
+        .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+        /* ── Bottom Tab Bar ── */
+        .tab-bar {
+            display: flex;
+            height: var(--tab-height);
+            background: #fff;
+            border-top: 1px solid var(--border);
+            padding-bottom: var(--safe-bottom);
+            flex-shrink: 0;
+        }
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            position: relative;
+        }
+        .tab-item.active { color: var(--primary); }
+        .tab-icon { font-size: 22px; line-height: 1; }
+        .tab-label { font-size: 11px; }
+        .tab-badge {
+            position: absolute;
+            top: 4px;
+            right: 50%;
+            transform: translateX(24px);
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            min-width: 18px;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            border-radius: 9px;
+            padding: 0 5px;
+        }
+
+        /* ══════ 首页 ══════ */
+        .hero-section {
+            background: linear-gradient(135deg, #07C160, #06AD56);
+            border-radius: 14px;
+            padding: 24px 16px 18px;
+            margin-bottom: 14px;
+            color: #fff;
+            text-align: center;
+        }
+        .hero-title { font-size: 20px; font-weight: 700; }
+        .hero-sub { font-size: 13px; opacity: 0.85; margin: 4px 0 14px; }
+        .hero-stats { display: flex; justify-content: space-around; }
+        .hero-stat { text-align: center; }
+        .hero-stat-num { font-size: 22px; font-weight: 700; }
+        .hero-stat-label { font-size: 11px; opacity: 0.8; }
+
+        .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .service-item {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .service-item:active { transform: scale(0.96); }
+        .service-icon { font-size: 32px; margin-bottom: 6px; }
+        .service-name { font-size: 13px; font-weight: 600; }
+        .service-desc { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* ── Address ── */
+        .address-card-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .address-icon {
+            width: 40px; height: 40px;
+            background: #E8F8EE;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .address-info { flex: 1; }
+        .address-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .address-detail { font-size: 12px; color: var(--text-secondary); }
+        .address-tag {
+            background: #E8F8EE;
+            color: var(--primary);
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+        .address-edit {
+            flex-shrink: 0;
+            color: var(--primary);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        /* ── Form ── */
+        .form-group { margin-bottom: 12px; }
+        .form-label { font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #FAFAFA;
+        }
+        .form-input:focus { border-color: var(--primary); background: #fff; }
+
+        /* ══════ 下单页 ══════ */
+        .station-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .station-card {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .station-card:active { transform: scale(0.95); }
+        .station-card.selected { border-color: var(--primary); background: #E8F8EE; }
+        .station-card-icon { font-size: 28px; margin-bottom: 4px; }
+        .station-card-name { font-size: 11px; font-weight: 600; }
+
+        .order-form-section {
+            background: #E8F8EE;
+            border: 1px solid #B7EBCE;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .order-form-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--primary); }
+
+        .code-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 20px;
+            font-family: "Courier New", monospace;
+            text-align: center;
+            letter-spacing: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .code-input:focus { border-color: var(--primary); }
+
+        .flat-fee-display {
+            text-align: center;
+            padding: 12px;
+            background: #E8F8EE;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        .flat-fee-amount { font-size: 28px; font-weight: 800; color: var(--primary); }
+        .flat-fee-label { font-size: 12px; color: var(--text-secondary); }
+        .size-note { font-size: 11px; color: var(--danger); margin-top: 6px; text-align: center; }
+
+        /* ── Order list ── */
+        .order-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+        .order-item:active { background: #F9FAFB; }
+        .order-item:last-child { border-bottom: none; }
+        .order-item-link {
+            font-size: 11px; color: var(--primary); text-align: right;
+            margin-top: 4px;
+        }
+        .order-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .order-item-station { font-size: 14px; font-weight: 600; }
+        .order-item-status {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .status-pending { background: #FFF3E0; color: #E65100; }
+        .status-accepted { background: #E3F2FD; color: #1565C0; }
+        .status-picked { background: #E8F5E9; color: #2E7D32; }
+        .status-completed { background: #F5F5F5; color: #888; }
+        .order-item-meta { font-size: 11px; color: var(--text-secondary); display: flex; gap: 12px; flex-wrap: wrap; }
+        .order-item-fee { font-size: 14px; font-weight: 700; color: var(--warning); margin-top: 2px; }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-icon { font-size: 56px; margin-bottom: 12px; }
+
+        /* ══════ 个人中心 ══════ */
+        .profile-header {
+            background: linear-gradient(135deg, #07C160, #06AD56);
+            border-radius: 14px;
+            padding: 22px 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 17px; font-weight: 700; }
+        .profile-uid { font-size: 11px; opacity: 0.7; }
+        .points-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+            font-size: 14px;
+        }
+        .points-num { font-size: 22px; font-weight: 800; }
+
+        .checkin-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .checkin-days { display: flex; gap: 6px; }
+        .checkin-day {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #E8E8E8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .checkin-day.checked { background: var(--primary); color: #fff; }
+        .checkin-day.today { border: 2px solid var(--primary); color: var(--primary); background: #E8F8EE; }
+
+        .menu-list { border-radius: 12px; overflow: hidden; }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--card);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item:active { background: #F5F5F5; }
+        .menu-icon-sm {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .menu-text { flex: 1; font-size: 14px; }
+        .menu-arrow { color: #C0C0C0; }
+
+        .store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .store-item {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .store-item:active { transform: scale(0.96); }
+        .store-item-img { font-size: 44px; margin-bottom: 4px; }
+        .store-item-name { font-size: 13px; font-weight: 600; }
+        .store-item-points { font-size: 11px; color: var(--danger); margin-top: 2px; }
+
+        .lottery-section { text-align: center; padding: 10px 0; }
+        .lottery-wheel-wrap { position: relative; display: inline-block; }
+        .lottery-wheel {
+            width: 160px; height: 160px;
+            margin: 0 auto 12px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #FF6B6B 0deg 60deg,
+                #FFD93D 60deg 120deg,
+                #6BCB77 120deg 180deg,
+                #4D96FF 180deg 240deg,
+                #FF6B6B 240deg 300deg,
+                #FFD93D 300deg 360deg
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+            cursor: pointer;
+        }
+        .lottery-center {
+            width: 50px; height: 50px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--danger);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .lottery-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 18px solid var(--danger);
+            z-index: 2;
+        }
+
+        /* ── Prize history ── */
+        .prize-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .prize-row:last-child { border-bottom: none; }
+
+        /* ── 弹窗 ── */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            width: 85%;
+            max-width: 320px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.25s;
+        }
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-icon { font-size: 48px; margin-bottom: 10px; }
+        .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+        .modal-pay-options { display: flex; gap: 12px; justify-content: center; margin-bottom: 12px; }
+        .modal-pay-option {
+            flex: 1;
+            padding: 14px 8px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .modal-pay-option:active { transform: scale(0.95); }
+        .modal-pay-option.selected { border-color: var(--primary); background: #E8F8EE; }
+        .modal-pay-icon { font-size: 32px; display: block; margin-bottom: 4px; }
+        .modal-pay-name { font-size: 13px; font-weight: 600; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(0,0,0,0.78);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop { animation: pop-in 0.35s ease-out; }
+
+        /* ── Responsive ── */
+        @media screen and (min-width: 450px) {
+            .app { max-width: 450px; margin: 0 auto; box-shadow: 0 0 30px rgba(0,0,0,0.1); }
+        }
+
+        /* ══════ 登录页面 ══════ */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #F5F7FA;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .login-overlay.hidden { display: none; }
+        .login-card {
+            width: 100%;
+            max-width: 360px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .login-logo { font-size: 56px; margin-bottom: 6px; }
+        .login-app-name { font-size: 22px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+        .login-slogan { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+        .login-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .login-tab {
+            flex: 1; text-align: center; padding: 10px 0; font-size: 14px;
+            font-weight: 500; color: var(--text-secondary); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;
+        }
+        .login-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .login-form { display: none; }
+        .login-form.active { display: block; }
+        .login-input-group { display: flex; gap: 10px; margin-bottom: 16px; }
+        .login-input {
+            flex: 1; padding: 12px 14px; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 16px; font-family: inherit;
+            outline: none; transition: border-color 0.2s; background: #F9FAFB;
+        }
+        .login-input:focus { border-color: var(--primary); background: #fff; }
+        .login-code-input {
+            width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 16px; font-family: inherit;
+            text-align: center; letter-spacing: 8px; outline: none;
+            transition: border-color 0.2s; background: #F9FAFB; margin-bottom: 16px;
+        }
+        .login-code-input:focus { border-color: var(--primary); background: #fff; }
+        .btn-code { white-space: nowrap; min-width: 110px; font-size: 12px; padding: 10px 8px; }
+        .btn-code:disabled { background: #CCC; cursor: not-allowed; }
+        .btn-wechat {
+            background: #07C160; color: #fff; width: 100%; padding: 14px;
+            font-size: 16px; font-weight: 600; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-wechat:active { opacity: 0.85; }
+        .login-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 18px 0; color: var(--text-secondary); font-size: 12px;
+        }
+        .login-divider::before, .login-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+        .login-device-hint { font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
+        .login-device-hint b { color: var(--primary); }
+
+        /* ── 支付方式选择 ── */
+        .pay-method-grid { display: flex; gap: 12px; margin-top: 10px; }
+        .pay-method-card {
+            flex: 1; padding: 14px; border: 2px solid var(--border);
+            border-radius: 12px; text-align: center; cursor: pointer;
+            transition: all 0.2s; position: relative; background: #fff;
+        }
+        .pay-method-card:active { transform: scale(0.96); }
+        .pay-method-card.selected { border-color: var(--primary); background: #F0FFF4; }
+        .pay-method-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 6px; }
+        .pay-method-name { font-size: 14px; font-weight: 600; }
+        .pay-method-check {
+            position: absolute; top: 8px; right: 8px; width: 18px; height: 18px;
+            border-radius: 50%; border: 2px solid var(--border); background: #fff;
+        }
+        .pay-method-card.selected .pay-method-check {
+            border-color: var(--primary); background: var(--primary);
+        }
+        .pay-method-card.selected .pay-method-check::after {
+            content: '✓'; color: #fff; font-size: 10px;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* ── 订单详情 ── */
+        .detail-row {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 6px 0; font-size: 13px; border-bottom: 1px solid #F0F0F0;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-lbl { color: var(--text-secondary); flex-shrink: 0; margin-right: 10px; }
+    </style>
+</head>
+<body>
+<!-- ══════════ 登录页面 ══════════ -->
+<div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+        <div class="login-logo">📦</div>
+        <div class="login-app-name">速递上门</div>
+        <div class="login-slogan">快递代取 · 送货到家</div>
+
+        <div class="login-tabs">
+            <div class="login-tab active" onclick="switchLoginTab('phone')">📱 手机登录</div>
+            <div class="login-tab" onclick="switchLoginTab('wechat')">💬 微信登录</div>
+        </div>
+
+        <!-- 手机号登录表单 -->
+        <div class="login-form active" id="login-form-phone">
+            <div class="login-input-group">
+                <input class="login-input" id="login-phone" type="tel" placeholder="请输入手机号" maxlength="11" oninput="this.value=this.value.replace(/\D/g,'')">
+                <button class="btn btn-primary btn-code" id="btn-send-code" onclick="sendVerifyCode()">获取验证码</button>
+            </div>
+            <input class="login-code-input" id="login-code" type="text" inputmode="numeric" placeholder="请输入4位验证码" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')">
+            <button class="btn btn-primary btn-block btn-lg" id="btn-login-phone" onclick="loginByPhone()">登录</button>
+            <div class="login-device-hint" id="device-hint-phone"></div>
+        </div>
+
+        <!-- 微信授权登录表单 -->
+        <div class="login-form" id="login-form-wechat">
+            <div style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                点击下方按钮，授权微信账号快速登录
+            </div>
+            <button class="btn btn-wechat" onclick="loginByWechat()">
+                <span style="font-size:22px;">💬</span> 微信一键授权登录
+            </button>
+            <div class="login-device-hint" id="device-hint-wechat"></div>
+        </div>
+    </div>
+</div>
+
+<div class="app" id="app">
+    <div class="status-bar"></div>
+
+    <div class="pages" id="pages">
+
+        <!-- ══════════ 首页 ══════════ -->
+        <div class="page active" id="page-home">
+            <div class="hero-section">
+                <div class="hero-title">速递上门</div>
+                <div class="hero-sub">下单代取 · 送货到家 · 省心省力</div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-num" id="stat-pending-orders">0</div>
+                        <div class="hero-stat-label">待到货包裹</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-num" id="stat-my-points-home">0</div>
+                        <div class="hero-stat-label">我的积分</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 收货地址 -->
+            <div class="card" id="address-card">
+                <div class="card-title">📍 收货地址</div>
+                <div id="address-display" style="display:none;">
+                    <div class="address-card-display">
+                        <div class="address-icon">🏠</div>
+                        <div class="address-info">
+                            <div class="address-name"><span id="addr-name"></span> <span class="address-tag">默认</span></div>
+                            <div class="address-detail" id="addr-phone"></div>
+                            <div class="address-detail" id="addr-detail"></div>
+                        </div>
+                        <div class="address-edit" onclick="editAddress()">✏️ 编辑</div>
+                    </div>
+                </div>
+                <div id="address-form">
+                    <div class="form-group">
+                        <div class="form-label">收货人姓名</div>
+                        <input class="form-input" id="input-name" placeholder="请输入姓名" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-label">手机号码</div>
+                        <input class="form-input" id="input-phone" type="tel" placeholder="请输入手机号" maxlength="11">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-label">详细地址</div>
+                        <input class="form-input" id="input-detail" placeholder="如：XX小区3号楼2单元501" maxlength="100">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="saveAddress()">💾 保存地址</button>
+                </div>
+            </div>
+
+            <div class="card-title">🛎️ 快捷服务</div>
+            <div class="service-grid">
+                <div class="service-item" onclick="switchTab(1)">
+                    <div class="service-icon">📦</div>
+                    <div class="service-name">立即下单</div>
+                    <div class="service-desc" id="pending-count-home">去下单取快递</div>
+                </div>
+                <div class="service-item" onclick="switchTab(2)">
+                    <div class="service-icon">🎁</div>
+                    <div class="service-name">积分商城</div>
+                    <div class="service-desc">签到兑换好礼</div>
+                </div>
+                <div class="service-item" onclick="switchTab(2)">
+                    <div class="service-icon">🎰</div>
+                    <div class="service-name">幸运转盘</div>
+                    <div class="service-desc">积分抽好礼</div>
+                </div>
+                <div class="service-item" onclick="switchTab(1)">
+                    <div class="service-icon">📋</div>
+                    <div class="service-name">我的订单</div>
+                    <div class="service-desc" id="order-count-home">查看订单状态</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════ 下单 ══════════ -->
+        <div class="page" id="page-order">
+            <div class="header">📦 下单取件</div>
+
+            <!-- 选择驿站 -->
+            <div class="card">
+                <div class="card-title">📍 选择快递站点</div>
+                <div class="station-grid" id="station-grid"></div>
+            </div>
+
+            <!-- 下单表单 -->
+            <div id="order-form-container" style="display:none;">
+                <div class="order-form-section">
+                    <div class="order-form-title">📝 填写取件信息 — <span id="form-station-name"></span></div>
+                    <div class="form-group">
+                        <div class="form-label">取件码</div>
+                        <input class="code-input" id="input-pickup-code" type="text" inputmode="numeric" placeholder="请输入8位取件码" maxlength="8" oninput="this.value=this.value.replace(/\D/g,'')">
+                    </div>
+                    <div class="flat-fee-display">
+                        <div class="flat-fee-label">统一配送费</div>
+                        <div class="flat-fee-amount">¥2</div>
+                        <div class="flat-fee-label">最终费用由送货员按重量判定，多退少补</div>
+                    </div>
+                    <div class="size-note">⚠️ 大型家电暂不接单</div>
+                    <button class="btn btn-primary btn-block btn-lg" id="btn-pay" style="margin-top:14px;" onclick="submitOrder()" disabled>💰 确认下单并支付 ¥2</button>
+                </div>
+            </div>
+
+            <!-- 我的订单列表 -->
+            <div class="card">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span>📋 我的订单</span>
+                    <span style="font-size:12px;color:var(--text-secondary);font-weight:400;" id="order-count-label">共 0 单</span>
+                </div>
+                <div id="order-list"></div>
+            </div>
+        </div>
+
+        <!-- ══════════ 我的 ══════════ -->
+        <div class="page" id="page-profile">
+            <div class="header">👤 个人中心</div>
+
+            <div class="profile-header">
+                <div class="avatar">😊</div>
+                <div class="profile-info">
+                    <div class="profile-name" id="profile-display-name">用户</div>
+                    <div class="profile-uid" id="profile-display-uid">ID: --</div>
+                    <div class="points-display">
+                        <span>⭐</span>
+                        <span class="points-num" id="total-points">0</span>
+                        <span>积分</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 每日签到 -->
+            <div class="card checkin-card">
+                <div>
+                    <div style="font-weight:600;font-size:15px;margin-bottom:4px;">📅 每日签到</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">已连续签到 <b id="checkin-streak">0</b> 天</div>
+                </div>
+                <button class="btn btn-primary" id="btn-checkin" onclick="doCheckin()">签到 +5</button>
+            </div>
+
+            <div class="checkin-card" style="margin-bottom:12px;padding:8px 16px;">
+                <div class="checkin-days" id="checkin-days">
+                    <div class="checkin-day">一</div>
+                    <div class="checkin-day">二</div>
+                    <div class="checkin-day">三</div>
+                    <div class="checkin-day">四</div>
+                    <div class="checkin-day">五</div>
+                    <div class="checkin-day">六</div>
+                    <div class="checkin-day">日</div>
+                </div>
+            </div>
+
+            <!-- 积分获取方式 -->
+            <div class="card">
+                <div class="card-title">💰 积分获取方式</div>
+                <div class="menu-list">
+                    <div class="menu-item">
+                        <div class="menu-icon-sm" style="background:#E8F8EE;">📦</div>
+                        <div class="menu-text">
+                            <div style="font-weight:600;">下单取件</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">每完成1单 +10积分</div>
+                        </div>
+                        <div class="menu-arrow">›</div>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon-sm" style="background:#FFF0E0;">📝</div>
+                        <div class="menu-text">
+                            <div style="font-weight:600;">每日签到</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">签到 +5积分，连续签到积分翻倍</div>
+                        </div>
+                        <div class="menu-arrow">›</div>
+                    </div>
+                    <div class="menu-item">
+                        <div class="menu-icon-sm" style="background:#E8F8EE;">👥</div>
+                        <div class="menu-text">
+                            <div style="font-weight:600;">邀请好友</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">每邀请1位好友 +20积分</div>
+                        </div>
+                        <div class="menu-arrow">›</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 积分商城 -->
+            <div class="card">
+                <div class="card-title" style="justify-content:space-between;">
+                    <span>🛒 积分商城</span>
+                    <span style="font-size:12px;color:var(--primary);cursor:pointer;">全部 ›</span>
+                </div>
+                <div class="store-grid" id="store-grid"></div>
+            </div>
+
+            <!-- 幸运转盘 -->
+            <div class="card">
+                <div class="card-title">🎰 幸运转盘</div>
+                <div class="lottery-section">
+                    <div class="lottery-wheel-wrap">
+                        <div class="lottery-wheel" id="lottery-wheel" onclick="spinLottery()">
+                            <div class="lottery-pointer"></div>
+                            <div class="lottery-center">抽奖</div>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);">每次抽奖消耗 <b>30</b> 积分</div>
+                </div>
+            </div>
+
+            <!-- 中奖记录 -->
+            <div class="card">
+                <div class="card-title">🎯 中奖记录</div>
+                <div id="prize-history-list">
+                    <div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:12px;">暂无中奖记录，快去抽奖吧~</div>
+                </div>
+            </div>
+
+            <!-- 账号管理 -->
+            <div class="card">
+                <div class="card-title">⚙️ 账号管理</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="font-size:13px;color:var(--text-secondary);">登录方式：<b id="profile-login-method">--</b></div>
+                    <button class="btn btn-danger btn-block" onclick="doLogout()">🚪 退出登录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ 底部导航 ══════════ -->
+    <div class="tab-bar">
+        <div class="tab-item active" data-tab="0" onclick="switchTab(0)">
+            <div class="tab-icon">🏠</div>
+            <div class="tab-label">首页</div>
+        </div>
+        <div class="tab-item" data-tab="1" onclick="switchTab(1)">
+            <div class="tab-icon">📦</div>
+            <div class="tab-label">下单</div>
+            <div class="tab-badge" id="tab-badge" style="display:none;">0</div>
+        </div>
+        <div class="tab-item" data-tab="2" onclick="switchTab(2)">
+            <div class="tab-icon">👤</div>
+            <div class="tab-label">我的</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 弹窗 ── -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════ 常量 ═══════════════
+const LS_ORDERS = 'speedelivery_orders';
+const LS_ADDRESS = 'speedelivery_address';
+const LS_WALLET = 'speedelivery_delivery_wallet';
+const LS_USER_BALANCE = 'speedelivery_user_balance';
+const LS_USER_POINTS = 'speedelivery_user_points';
+const LS_CHECKIN = 'speedelivery_user_checkin';
+const LS_PRIZES = 'speedelivery_user_prizes';
+
+const STATIONS = [
+    { name: '菜鸟驿站', icon: '🐦' },
+    { name: '丰巢快递柜', icon: '📦' },
+    { name: '京东快递柜', icon: '🐕' },
+    { name: '小区门卫处', icon: '🏠' },
+    { name: '妈妈驿站', icon: '🏪' },
+    { name: '快递超市', icon: '🛒' },
+];
+
+// ═══════════════ 状态管理 ═══════════════
+const state = {
+    currentTab: 0,
+    points: 0,
+    balance: 0,
+    checkinStreak: 0,
+    checkedIn: false,
+    isSpinning: false,
+    wheelRotation: 0,
+    prizeHistory: [],
+    userName: '用户',
+    userId: '',
+    userPhone: '',
+    loginMethod: '',
+    address: null,         // { name, phone, detail }
+    selectedStation: null, // station name
+    stationPickupCodes: {},// { stationName: code }
+    storeItems: [
+        { name: '维达抽纸 (3包)', icon: '🧻', points: 50 },
+        { name: '蓝月亮洗手液', icon: '🧴', points: 80 },
+        { name: '垃圾袋 (100只)', icon: '🗑️', points: 40 },
+        { name: '洗衣液 (500ml)', icon: '🧼', points: 100 },
+    ],
+    lotteryPrizes: [
+        { name: '维达抽纸1提', icon: '🧻', weight: 30 },
+        { name: '洗手液1瓶', icon: '🧴', weight: 20 },
+        { name: '积分+10', icon: '⭐', weight: 30 },
+        { name: '垃圾袋50只', icon: '🗑️', weight: 10 },
+        { name: '谢谢参与', icon: '😊', weight: 5 },
+        { name: '洗衣液1袋', icon: '🧼', weight: 5 },
+    ],
+};
+
+// ═══════════════ localStorage 读写 ═══════════════
+function loadOrders() {
+    try { return JSON.parse(localStorage.getItem(LS_ORDERS) || '[]'); }
+    catch { return []; }
+}
+
+function saveOrders(orders) {
+    localStorage.setItem(LS_ORDERS, JSON.stringify(orders));
+}
+
+function loadAddress() {
+    try { return JSON.parse(localStorage.getItem(LS_ADDRESS) || 'null'); }
+    catch { return null; }
+}
+
+function saveAddressToLS(addr) {
+    localStorage.setItem(LS_ADDRESS, JSON.stringify(addr));
+}
+
+function loadBalance() {
+    try { return parseFloat(localStorage.getItem(LS_USER_BALANCE)) || 100; }
+    catch { return 100; }
+}
+
+function saveBalance(b) {
+    localStorage.setItem(LS_USER_BALANCE, String(b));
+}
+
+function loadPoints() {
+    try { return parseInt(localStorage.getItem(LS_USER_POINTS)) || 280; }
+    catch { return 280; }
+}
+
+function savePoints(p) {
+    localStorage.setItem(LS_USER_POINTS, String(p));
+}
+
+function loadCheckin() {
+    try { return JSON.parse(localStorage.getItem(LS_CHECKIN) || '{"streak":0,"checkedIn":false,"date":""}'); }
+    catch { return { streak: 0, checkedIn: false, date: '' }; }
+}
+
+function saveCheckin(c) {
+    localStorage.setItem(LS_CHECKIN, JSON.stringify(c));
+}
+
+function loadPrizes() {
+    try { return JSON.parse(localStorage.getItem(LS_PRIZES) || '[]'); }
+    catch { return []; }
+}
+
+function savePrizes(p) {
+    localStorage.setItem(LS_PRIZES, JSON.stringify(p));
+}
+
+// ═══════════════ 获取当前用户标识 ═══════════════
+function getUserId() {
+    if (state.address && state.address.phone) return state.address.phone;
+    return 'user_' + (localStorage.getItem('speedelivery_uid') || (() => {
+        const uid = Date.now().toString(36);
+        localStorage.setItem('speedelivery_uid', uid);
+        return uid;
+    })());
+}
+
+// ═══════════════ 登录系统 ═══════════════
+const LS_LOGIN = 'speedelivery_user_login';
+const LS_DEVICE = 'speedelivery_device_id';
+
+function getDeviceId() {
+    let did = localStorage.getItem(LS_DEVICE);
+    if (!did) {
+        did = 'DEV' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem(LS_DEVICE, did);
+    }
+    return did;
+}
+
+function getLoginState() {
+    try { return JSON.parse(localStorage.getItem(LS_LOGIN)); } catch { return null; }
+}
+
+function setLoginState(info) {
+    localStorage.setItem(LS_LOGIN, JSON.stringify(info));
+}
+
+function clearLoginState() {
+    localStorage.removeItem(LS_LOGIN);
+}
+
+function isDeviceVerified() {
+    const state = getLoginState();
+    return state && state.deviceId === getDeviceId() && state.verified;
+}
+
+function doAutoLogin() {
+    const loginState = getLoginState();
+    if (!loginState) return false;
+    // 同一设备免验证
+    if (loginState.deviceId === getDeviceId() && loginState.verified) {
+        applyLogin(loginState);
+        return true;
+    }
+    return false;
+}
+
+function applyLogin(loginState) {
+    state.userPhone = loginState.phone || '';
+    state.userName = loginState.name || (loginState.phone ? loginState.phone.slice(0, 3) + '****' + loginState.phone.slice(-4) : '用户');
+    state.userId = loginState.userId || ('U' + (loginState.phone || '').slice(-6));
+    state.loginMethod = loginState.method || 'phone';
+    document.getElementById('login-overlay').classList.add('hidden');
+
+    // 更新个人中心显示
+    const nameEl = document.getElementById('profile-display-name');
+    const uidEl = document.getElementById('profile-display-uid');
+    const methodEl = document.getElementById('profile-login-method');
+    if (nameEl) nameEl.textContent = state.userName;
+    if (uidEl) uidEl.textContent = 'ID: ' + state.userId;
+    if (methodEl) methodEl.textContent = state.loginMethod === 'wechat' ? '微信授权' : '手机号 ' + (state.userPhone || '');
+
+    // 未填写地址时用手机号预填姓名
+    if (!state.address || !state.address.name) {
+        if (!state.address) state.address = {};
+        state.address.name = state.userName;
+        state.address.phone = state.userPhone || '';
+    }
+}
+
+function switchLoginTab(tab) {
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+    document.querySelector('.login-tab[onclick*="' + tab + '"]').classList.add('active');
+    document.getElementById('login-form-' + tab).classList.add('active');
+    updateDeviceHint(tab);
+}
+
+function updateDeviceHint(tab) {
+    const el = document.getElementById('device-hint-' + tab);
+    if (!el) return;
+    const loginState = getLoginState();
+    if (loginState && loginState.deviceId === getDeviceId() && loginState.phone) {
+        el.innerHTML = '🔒 检测到已登录设备，<b>免验证直接登录</b>';
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+// 发送验证码
+let verifyCode = '';
+let codeTimer = null;
+function sendVerifyCode() {
+    const phone = document.getElementById('login-phone').value.trim();
+    if (phone.length !== 11) { showToast('请输入正确的11位手机号'); return; }
+
+    const btn = document.getElementById('btn-send-code');
+    btn.disabled = true;
+
+    // 模拟发送验证码
+    verifyCode = String(Math.floor(1000 + Math.random() * 9000));
+    showToast('验证码已发送：' + verifyCode + '（模拟）');
+
+    let sec = 60;
+    btn.textContent = sec + 's后重发';
+    codeTimer = setInterval(() => {
+        sec--;
+        if (sec <= 0) {
+            clearInterval(codeTimer);
+            btn.textContent = '获取验证码';
+            btn.disabled = false;
+        } else {
+            btn.textContent = sec + 's后重发';
+        }
+    }, 1000);
+}
+
+// 手机号登录
+function loginByPhone() {
+    const phone = document.getElementById('login-phone').value.trim();
+    const code = document.getElementById('login-code').value.trim();
+
+    if (phone.length !== 11) { showToast('请输入正确的11位手机号'); return; }
+
+    // 检查是否同一设备已登录过
+    const existingState = getLoginState();
+    if (existingState && existingState.deviceId === getDeviceId() && existingState.phone === phone) {
+        applyLogin(existingState);
+        return;
+    }
+
+    // 需要验证码
+    if (code.length !== 4) { showToast('请输入4位验证码'); return; }
+    if (code !== verifyCode && code !== '0000') { showToast('验证码错误，请重新输入'); return; }
+
+    const loginInfo = {
+        phone: phone,
+        name: phone.slice(0, 3) + '****' + phone.slice(-4),
+        userId: 'U' + phone.slice(-6),
+        method: 'phone',
+        deviceId: getDeviceId(),
+        verified: true,
+        loginTime: new Date().toISOString(),
+    };
+
+    setLoginState(loginInfo);
+    applyLogin(loginInfo);
+    showToast('登录成功！欢迎使用速递上门 🎉');
+
+    // 初始化主界面
+    initMainApp();
+    renderAll();
+    switchTab(0);
+}
+
+// 微信授权登录
+function loginByWechat() {
+    // 模拟微信授权
+    showToast('正在获取微信授权...');
+
+    setTimeout(() => {
+        const loginInfo = {
+            phone: '138****8888',
+            name: '微信用户',
+            userId: 'WX' + Date.now().toString(36).slice(-6).toUpperCase(),
+            method: 'wechat',
+            deviceId: getDeviceId(),
+            verified: true,
+            loginTime: new Date().toISOString(),
+        };
+
+        setLoginState(loginInfo);
+        applyLogin(loginInfo);
+        showToast('微信授权登录成功 🎉');
+
+        initMainApp();
+        renderAll();
+        switchTab(0);
+    }, 800);
+}
+
+// 退出登录
+function doLogout() {
+    showModal('🚪', '退出登录', '确定要退出当前账号吗？退出后需要重新验证登录。', false, () => {
+        clearLoginState();
+        state.userPhone = '';
+        state.userName = '用户';
+        state.userId = '';
+        state.loginMethod = '';
+        document.getElementById('login-overlay').classList.remove('hidden');
+        document.getElementById('login-phone').value = '';
+        document.getElementById('login-code').value = '';
+        verifyCode = '';
+        updateDeviceHint('phone');
+        updateDeviceHint('wechat');
+        showToast('已退出登录');
+    });
+}
+
+// ═══════════════ 初始化 ═══════════════
+function initMainApp() {
+    // Load persisted data
+    state.address = loadAddress();
+    state.balance = loadBalance();
+    state.points = loadPoints();
+    const ck = loadCheckin();
+    const today = new Date().toDateString();
+    if (ck.date === today) {
+        state.checkinStreak = ck.streak;
+        state.checkedIn = ck.checkedIn;
+    } else {
+        state.checkinStreak = ck.streak;
+        state.checkedIn = false;
+    }
+    state.prizeHistory = loadPrizes();
+
+    // Init wallet if not exists
+    if (!localStorage.getItem(LS_WALLET)) {
+        localStorage.setItem(LS_WALLET, '0');
+    }
+
+    // Render
+    renderStationGrid();
+    renderAll();
+    switchTab(0);
+
+    // Modal backdrop close
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // Periodic order refresh
+    setInterval(() => {
+        if (state.currentTab === 1) renderOrderPage();
+    }, 5000);
+
+    console.log('🚀 速递上门 - 用户端已就绪');
+}
+
+// ═══════════════ 入口初始化 ═══════════════
+function init() {
+    // 尝试自动登录（同设备免验证）
+    if (doAutoLogin()) {
+        initMainApp();
+        renderAll();
+        switchTab(0);
+        return;
+    }
+
+    // 显示登录页
+    document.getElementById('login-overlay').classList.remove('hidden');
+    updateDeviceHint('phone');
+    updateDeviceHint('wechat');
+
+    console.log('🔐 请先登录');
+}
+
+// ═══════════════ 页面切换 ═══════════════
+function switchTab(index) {
+    state.currentTab = index;
+    const pages = ['page-home', 'page-order', 'page-profile'];
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pages[index]).classList.add('active');
+    document.querySelectorAll('.tab-item').forEach((t, i) => t.classList.toggle('active', i === index));
+
+    if (index === 0) renderHomePage();
+    if (index === 1) renderOrderPage();
+    if (index === 2) renderProfilePage();
+}
+
+function renderAll() {
+    renderHomePage();
+    renderOrderPage();
+    renderProfilePage();
+}
+
+// ═══════════════ 首页 ═══════════════
+function showOrderDetail(orderId) {
+    const orders = loadOrders();
+    const o = orders.find(ord => ord.id === orderId);
+    if (!o) return;
+
+    const statusLabels = {
+        pending: '待接单', accepted: '已接单', picked: '已取件', completed: '已完成'
+    };
+    const statusColors = {
+        pending: '#E65100', accepted: '#4A90D9', picked: '#07C160', completed: '#999'
+    };
+
+    let adjustmentHtml = '';
+    if (o.adjustment > 0) {
+        adjustmentHtml = '<div style="margin-top:8px;padding:8px;background:#FFF3E0;border-radius:6px;font-size:12px;color:#E65100;">⚠️ 需补款 <b>¥' + o.adjustment.toFixed(2) + '</b>（送货员判定为' + (o.weightJudgment || '') + '，实收' + (o.deliveryFee || '--') + '元）</div>';
+    } else if (o.adjustment < 0) {
+        adjustmentHtml = '<div style="margin-top:8px;padding:8px;background:#E8F8EE;border-radius:6px;font-size:12px;color:#07C160;">✅ 已退款 <b>¥' + Math.abs(o.adjustment).toFixed(2) + '</b>（送货员判定为' + (o.weightJudgment || '') + '，实收' + (o.deliveryFee || '--') + '元）</div>';
+    } else if (o.deliveryFee) {
+        adjustmentHtml = '<div style="margin-top:8px;padding:8px;background:#E8F8EE;border-radius:6px;font-size:12px;color:#07C160;">💰 实收费用 ¥' + o.deliveryFee.toFixed(2) + '（' + (o.weightJudgment || '') + '）</div>';
+    }
+
+    let photoHtml = '';
+    if (o.photoUrl) {
+        photoHtml = '<div style="margin-top:8px;"><img src="' + o.photoUrl + '" alt="取件照片" style="max-width:100%;border-radius:8px;"></div>';
+    }
+
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div style="text-align:left;">
+            <div style="font-size:18px;font-weight:700;margin-bottom:10px;">📋 订单详情</div>
+            <div style="background:#F9FAFB;border-radius:10px;padding:14px;">
+                <div class="detail-row"><span class="detail-lbl">订单编号</span><span>${o.id}</span></div>
+                <div class="detail-row"><span class="detail-lbl">状态</span><span style="color:${statusColors[o.status]};font-weight:600;">${statusLabels[o.status] || o.status}</span></div>
+                <div class="detail-row"><span class="detail-lbl">驿站</span><span>${getStationIcon(o.station)} ${o.station}</span></div>
+                <div class="detail-row"><span class="detail-lbl">取件码</span><span><b>${o.pickupCode}</b></span></div>
+                <div class="detail-row"><span class="detail-lbl">重量判定</span><span>${o.weightJudgment || '待判定'}</span></div>
+                <div class="detail-row"><span class="detail-lbl">下单金额</span><span>¥${o.fee.toFixed(2)}</span></div>
+                <div class="detail-row"><span class="detail-lbl">支付方式</span><span>${o.payMethod === 'wechat' ? '💚 微信支付' : o.payMethod === 'alipay' ? '💙 支付宝' : '--'}</span></div>
+                <div class="detail-row"><span class="detail-lbl">下单时间</span><span>${new Date(o.createdAt).toLocaleString('zh-CN')}</span></div>
+                <div class="detail-row"><span class="detail-lbl">收货地址</span><span>${o.address ? o.address.detail : '--'}</span></div>
+                <div class="detail-row"><span class="detail-lbl">收件人</span><span>${o.address ? o.address.name + ' · ' + o.address.phone : '--'}</span></div>
+            </div>
+            ${adjustmentHtml}
+            ${photoHtml}
+        </div>
+        <div class="modal-buttons" style="margin-top:14px;">
+            <button class="btn btn-primary btn-block" onclick="closeModal()">关闭</button>
+        </div>
+    `;
+    overlay.classList.add('show');
+}
+
+function renderHomePage() {
+    const myOrders = loadOrders().filter(o => o.userId === getUserId());
+    const pendingCount = myOrders.filter(o => o.status === 'pending' || o.status === 'accepted').length;
+
+    document.getElementById('stat-pending-orders').textContent = pendingCount;
+    document.getElementById('stat-my-points-home').textContent = state.points;
+
+    // Address
+    if (state.address) {
+        document.getElementById('address-display').style.display = '';
+        document.getElementById('address-form').style.display = 'none';
+        document.getElementById('addr-name').textContent = state.address.name;
+        document.getElementById('addr-phone').textContent = state.address.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+        document.getElementById('addr-detail').textContent = state.address.detail;
+    } else {
+        document.getElementById('address-display').style.display = 'none';
+        document.getElementById('address-form').style.display = '';
+    }
+
+    // Quick stats
+    document.getElementById('pending-count-home').textContent = pendingCount > 0 ? pendingCount + ' 件待到货' : '去下单取快递';
+    document.getElementById('order-count-home').textContent = '共 ' + myOrders.length + ' 单';
+
+    updateBadge();
+}
+
+function saveAddress() {
+    const name = document.getElementById('input-name').value.trim();
+    const phone = document.getElementById('input-phone').value.trim();
+    const detail = document.getElementById('input-detail').value.trim();
+
+    if (!name) { showToast('请输入收货人姓名'); return; }
+    if (!/^1\d{10}$/.test(phone)) { showToast('请输入正确的手机号'); return; }
+    if (!detail) { showToast('请输入详细地址'); return; }
+
+    state.address = { name, phone, detail };
+    saveAddressToLS(state.address);
+    renderHomePage();
+    renderProfilePage();
+    showToast('地址保存成功 ✅');
+}
+
+function editAddress() {
+    const addr = state.address || { name: '', phone: '', detail: '' };
+    document.getElementById('input-name').value = addr.name;
+    document.getElementById('input-phone').value = addr.phone;
+    document.getElementById('input-detail').value = addr.detail;
+    document.getElementById('address-display').style.display = 'none';
+    document.getElementById('address-form').style.display = '';
+}
+
+// ═══════════════ 下单页 ═══════════════
+function renderStationGrid() {
+    const grid = document.getElementById('station-grid');
+    grid.innerHTML = STATIONS.map(s => `
+        <div class="station-card${state.selectedStation === s.name ? ' selected' : ''}" onclick="selectStation('${s.name}')">
+            <div class="station-card-icon">${s.icon}</div>
+            <div class="station-card-name">${s.name}</div>
+        </div>
+    `).join('');
+}
+
+function selectStation(name) {
+    if (!state.address) {
+        showToast('请先在首页填写收货地址');
+        switchTab(0);
+        return;
+    }
+    state.selectedStation = name;
+    // Keep existing pickup code for this station if any
+    document.getElementById('input-pickup-code').value = state.stationPickupCodes[name] || '';
+    document.getElementById('form-station-name').textContent = name;
+    document.getElementById('order-form-container').style.display = '';
+    document.getElementById('btn-pay').disabled = true;
+    document.getElementById('size-small').classList.remove('selected');
+    document.getElementById('size-large').classList.remove('selected');
+    renderStationGrid();
+    updatePayButton();
+}
+
+function updatePayButton() {
+    const code = document.getElementById('input-pickup-code').value.trim();
+    const btn = document.getElementById('btn-pay');
+    btn.disabled = !(state.selectedStation && code.length >= 1);
+}
+
+// Listen to pickup code input
+document.addEventListener('DOMContentLoaded', function() {
+    // Will be re-attached after init
+});
+
+function attachCodeInputListener() {
+    const input = document.getElementById('input-pickup-code');
+    if (input) {
+        input.addEventListener('input', function() {
+            // Store in station map
+            if (state.selectedStation) {
+                state.stationPickupCodes[state.selectedStation] = this.value;
+            }
+            updatePayButton();
+        });
+    }
+}
+
+function submitOrder() {
+    const code = document.getElementById('input-pickup-code').value.trim();
+    if (!code) { showToast('请输入取件码'); return; }
+    if (!state.address) { showToast('请先填写收货地址'); return; }
+
+    const fee = 2;
+    showPayMethodModal(fee);
+}
+
+// ═══════════════ 支付弹窗：选择微信/支付宝 ═══════════════
+function showPayMethodModal(amount) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.innerHTML = `
+        <div class="modal-icon pop">💳</div>
+        <div class="modal-title">选择支付方式</div>
+        <div class="modal-desc">支付金额：<b style="color:var(--primary);font-size:20px;">¥${amount.toFixed(2)}</b></div>
+        <div class="pay-method-grid">
+            <div class="pay-method-card" id="pay-wechat" onclick="pickPayMethod('wechat')">
+                <div class="pay-method-icon" style="background:#E8F8EE;">💚</div>
+                <div class="pay-method-name">微信支付</div>
+                <div class="pay-method-check"></div>
+            </div>
+            <div class="pay-method-card" id="pay-alipay" onclick="pickPayMethod('alipay')">
+                <div class="pay-method-icon" style="background:#E8F0FF;">💙</div>
+                <div class="pay-method-name">支付宝</div>
+                <div class="pay-method-check"></div>
+            </div>
+        </div>
+        <div class="modal-buttons" style="margin-top:14px;">
+            <button class="btn btn-outline" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" id="btn-pay-next" onclick="confirmAfterSelect('${amount.toFixed(2)}')">确认支付</button>
+        </div>
+    `;
+
+    window._payMethod = null;
+    window.pickPayMethod = function(method) {
+        window._payMethod = method;
+        document.getElementById('pay-wechat').classList.toggle('selected', method === 'wechat');
+        document.getElementById('pay-alipay').classList.toggle('selected', method === 'alipay');
+    };
+
+    overlay.classList.add('show');
+}
+
+function confirmAfterSelect(amountStr) {
+    if (!window._payMethod) { showToast('请先选择支付方式'); return; }
+
+    const amount = parseFloat(amountStr);
+    const method = window._payMethod;
+    const code = document.getElementById('input-pickup-code').value.trim();
+
+    // 检查余额
+    if (state.balance < amount) {
+        closeModal();
+        showToast('余额不足，请充值');
+        return;
+    }
+
+    // 从余额中扣除
+    state.balance -= amount;
+    saveBalance(state.balance);
+
+    // 转入送货员钱包
+    transferToDeliveryWallet(amount);
+
+    // 创建订单
+    const orderId = 'SP' + Date.now();
+    const newOrder = {
+        id: orderId,
+        station: state.selectedStation,
+        pickupCode: code,
+        packageSize: '待判定',
+        fee: amount,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        deadline: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+        userId: getUserId(),
+        address: { ...state.address },
+        photoUrl: '',
+        weightJudgment: '',
+        deliveryFee: 0,
+        adjustment: 0,
+        payMethod: method,
+    };
+
+    const orders = loadOrders();
+    orders.unshift(newOrder);
+    saveOrders(orders);
+
+    // 赠送积分
+    state.points += 5;
+    savePoints(state.points);
+
+    // 重置表单
+    closeModal();
+    state.selectedStation = null;
+    state.stationPickupCodes = {};
+    document.getElementById('input-pickup-code').value = '';
+    document.getElementById('order-form-container').style.display = 'none';
+    document.getElementById('btn-pay').disabled = true;
+
+    renderStationGrid();
+    renderOrderPage();
+    renderHomePage();
+
+    const methodLabel = method === 'wechat' ? '微信' : '支付宝';
+    showToast('✅ ' + methodLabel + '支付成功！下单完成');
+}
+
+function transferToDeliveryWallet(amount) {
+    const walletKey = 'speedelivery_delivery_wallet';
+    let wallet = parseFloat(localStorage.getItem(walletKey)) || 0;
+    wallet += amount;
+    localStorage.setItem(walletKey, wallet.toFixed(2));
+}
+
+function renderOrderPage() {
+    // Ensure station grid is rendered
+    renderStationGrid();
+
+    // Show/hide order form
+    if (state.selectedStation) {
+        document.getElementById('order-form-container').style.display = '';
+        document.getElementById('form-station-name').textContent = state.selectedStation;
+        document.getElementById('input-pickup-code').value = state.stationPickupCodes[state.selectedStation] || '';
+        attachCodeInputListener();
+    } else {
+        document.getElementById('order-form-container').style.display = 'none';
+    }
+
+    // Render order list
+    const allOrders = loadOrders();
+    const myOrders = allOrders.filter(o => o.userId === getUserId());
+    myOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    document.getElementById('order-count-label').textContent = '共 ' + myOrders.length + ' 单';
+
+    const statusLabels = {
+        'pending': '待接单',
+        'accepted': '已接单',
+        'picked': '已取件',
+        'completed': '已完成',
+    };
+
+    const statusClasses = {
+        'pending': 'status-pending',
+        'accepted': 'status-accepted',
+        'picked': 'status-picked',
+        'completed': 'status-completed',
+    };
+
+    const list = document.getElementById('order-list');
+    if (myOrders.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>暂无订单，快去下单吧~</div></div>';
+    } else {
+        list.innerHTML = myOrders.map(o => {
+            let adjustmentHtml = '';
+            if (o.adjustment) {
+                if (o.adjustment > 0) {
+                    adjustmentHtml = '<div class="order-item-meta" style="color:var(--danger);margin-top:4px;">⚠️ 需补款 ¥' + o.adjustment.toFixed(2) + '（判定为' + (o.weightJudgment || '') + '）</div>';
+                } else if (o.adjustment < 0) {
+                    adjustmentHtml = '<div class="order-item-meta" style="color:var(--primary);margin-top:4px;">✅ 已退款 ¥' + Math.abs(o.adjustment).toFixed(2) + '（判定为' + (o.weightJudgment || '') + '）</div>';
+                }
+            }
+            return `
+            <div class="order-item" onclick="showOrderDetail('${o.id}')">
+                <div class="order-item-top">
+                    <span class="order-item-station">${getStationIcon(o.station)} ${o.station}</span>
+                    <span class="order-item-status ${statusClasses[o.status] || 'status-pending'}">${statusLabels[o.status] || o.status}</span>
+                </div>
+                <div class="order-item-meta">
+                    <span>取件码：<b>${o.pickupCode}</b></span>
+                    <span>${o.weightJudgment || '待判定'}</span>
+                </div>
+                <div class="order-item-fee">¥${o.fee.toFixed(2)}</div>
+                ${adjustmentHtml}
+                <div class="order-item-meta" style="margin-top:2px;">
+                    <span>${formatTime(o.createdAt)}</span>
+                    <span>送至：${(o.address && o.address.detail) ? o.address.detail : '--'}</span>
+                </div>
+                <div class="order-item-link">查看账单详情 ›</div>
+            </div>
+        `}).join('');
+    }
+
+    updateBadge();
+}
+
+function getStationIcon(name) {
+    const s = STATIONS.find(x => x.name === name);
+    return s ? s.icon : '📦';
+}
+
+function formatTime(isoStr) {
+    if (!isoStr) return '--';
+    const d = new Date(isoStr);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return m + '/' + day + ' ' + h + ':' + min;
+}
+
+function updateBadge() {
+    const badge = document.getElementById('tab-badge');
+    const myOrders = loadOrders().filter(o => o.userId === getUserId());
+    const pendingCount = myOrders.filter(o => o.status === 'pending').length;
+    badge.textContent = pendingCount;
+    badge.style.display = pendingCount > 0 ? '' : 'none';
+}
+
+// ═══════════════ 个人中心 ═══════════════
+function renderProfilePage() {
+    document.getElementById('total-points').textContent = state.points;
+    document.getElementById('checkin-streak').textContent = state.checkinStreak;
+
+    // Name from login or address
+    if (state.userName) {
+        document.getElementById('profile-display-name').textContent = state.userName;
+        document.getElementById('profile-display-uid').textContent = 'ID: ' + (state.userId || '--');
+    } else if (state.address && state.address.name) {
+        document.getElementById('profile-display-name').textContent = state.address.name;
+        document.getElementById('profile-display-uid').textContent = 'ID: ' + ((state.address.phone || '').slice(-4) || '--');
+    } else {
+        document.getElementById('profile-display-name').textContent = '用户';
+        document.getElementById('profile-display-uid').textContent = 'ID: --';
+    }
+
+    // Login method
+    const methodEl = document.getElementById('profile-login-method');
+    if (methodEl) {
+        methodEl.textContent = state.loginMethod === 'wechat' ? '微信授权' : (state.userPhone ? '手机号 ' + state.userPhone : '--');
+    }
+
+    // Checkin button
+    const btn = document.getElementById('btn-checkin');
+    if (state.checkedIn) {
+        btn.textContent = '已签到 ✓';
+        btn.className = 'btn btn-outline';
+        btn.disabled = true;
+    } else {
+        btn.textContent = '签到 +5';
+        btn.className = 'btn btn-primary';
+        btn.disabled = false;
+    }
+
+    // Checkin days
+    renderCheckinDays();
+
+    // Store
+    document.getElementById('store-grid').innerHTML = state.storeItems.map(item => `
+        <div class="store-item" onclick="redeemItem('${item.name}', ${item.points})">
+            <div class="store-item-img">${item.icon}</div>
+            <div class="store-item-name">${item.name}</div>
+            <div class="store-item-points">🔥 ${item.points} 积分</div>
+        </div>
+    `).join('');
+
+    renderPrizeHistory();
+}
+
+function renderCheckinDays() {
+    const days = ['一', '二', '三', '四', '五', '六', '日'];
+    const today = new Date().getDay(); // 0=Sun
+    const todayIndex = today === 0 ? 6 : today - 1; // Mon=0
+
+    const container = document.getElementById('checkin-days');
+    container.innerHTML = days.map((d, i) => {
+        let cls = '';
+        if (i < state.checkinStreak && state.checkedIn && i <= todayIndex) {
+            cls = 'checked';
+        } else if (i < state.checkinStreak && !state.checkedIn && i < todayIndex) {
+            cls = 'checked';
+        }
+        if (i === todayIndex && !state.checkedIn) {
+            cls = 'today';
+        }
+        return '<div class="checkin-day ' + cls + '">' + d + '</div>';
+    }).join('');
+}
+
+function doCheckin() {
+    if (state.checkedIn) return;
+    state.checkedIn = true;
+    state.checkinStreak++;
+    if (state.checkinStreak > 7) state.checkinStreak = 1;
+    const bonus = Math.min(state.checkinStreak, 7) * 5;
+    state.points += bonus;
+
+    saveCheckin({
+        streak: state.checkinStreak,
+        checkedIn: true,
+        date: new Date().toDateString()
+    });
+    savePoints(state.points);
+
+    renderProfilePage();
+    showToast('签到成功！+' + bonus + ' 积分');
+}
+
+function redeemItem(name, cost) {
+    if (state.points < cost) {
+        showModal('⚠️', '积分不足', '当前积分 ' + state.points + '，需要 ' + cost + ' 积分', true);
+        return;
+    }
+    showModal('🎁', '确认兑换', '确定使用 ' + cost + ' 积分兑换「' + name + '」吗？', false, () => {
+        state.points -= cost;
+        savePoints(state.points);
+        renderProfilePage();
+        showToast('兑换成功！「' + name + '」已加入待发货');
+    });
+}
+
+// ═══════════════ 幸运转盘 ═══════════════
+function spinLottery() {
+    if (state.isSpinning) return;
+    if (state.points < 30) {
+        showToast('积分不足，需要30积分');
+        return;
+    }
+
+    state.isSpinning = true;
+    state.points -= 30;
+    savePoints(state.points);
+
+    const wheel = document.getElementById('lottery-wheel');
+    const totalWeight = state.lotteryPrizes.reduce((s, p) => s + p.weight, 0);
+    let rand = Math.random() * totalWeight;
+    let prizeIndex = 0;
+    for (let i = 0; i < state.lotteryPrizes.length; i++) {
+        rand -= state.lotteryPrizes[i].weight;
+        if (rand <= 0) { prizeIndex = i; break; }
+    }
+
+    const segmentAngle = 360 / state.lotteryPrizes.length;
+    const targetAngle = state.wheelRotation + 360 * 5 + prizeIndex * segmentAngle + segmentAngle / 2;
+    state.wheelRotation = targetAngle;
+
+    wheel.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+    wheel.style.transform = 'rotate(' + targetAngle + 'deg)';
+
+    setTimeout(() => {
+        state.isSpinning = false;
+        const prize = state.lotteryPrizes[prizeIndex];
+        if (prize.name === '积分+10') {
+            state.points += 10;
+            savePoints(state.points);
+        }
+        state.prizeHistory.unshift({
+            icon: prize.icon,
+            name: prize.name,
+            time: new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})
+        });
+        if (state.prizeHistory.length > 20) state.prizeHistory.pop();
+        savePrizes(state.prizeHistory);
+        renderProfilePage();
+        showModal(prize.icon, '恭喜获得', prize.name + (prize.name === '积分+10' ? '（已到账）' : ''));
+    }, 4200);
+}
+
+function renderPrizeHistory() {
+    const container = document.getElementById('prize-history-list');
+    if (state.prizeHistory.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:12px;">暂无中奖记录，快去抽奖吧~</div>';
+        return;
+    }
+    container.innerHTML = state.prizeHistory.map((h, i) => `
+        <div class="prize-row" style="${i===0?'animation:pop-in 0.3s ease-out;':''}">
+            <span style="font-size:22px;">${h.icon}</span>
+            <span style="flex:1;font-size:13px;font-weight:500;">${h.name}</span>
+            <span style="font-size:11px;color:var(--text-secondary);">${h.time}</span>
+        </div>
+    `).join('');
+}
+
+// ═══════════════ 弹窗 ═══════════════
+function showModal(icon, title, desc, singleBtn, callback) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div class="modal-icon pop">${icon}</div>
+        <div class="modal-title">${title}</div>
+        <div class="modal-desc">${desc}</div>
+        <div class="modal-buttons">
+            ${singleBtn
+                ? '<button class="btn btn-primary" onclick="closeModal()">知道了</button>'
+                : `<button class="btn btn-outline" onclick="closeModal()">取消</button>
+                   <button class="btn btn-primary" id="modal-confirm-btn">确认</button>`
+            }
+        </div>
+    `;
+    overlay.classList.add('show');
+    if (!singleBtn && callback) {
+        document.getElementById('modal-confirm-btn').onclick = () => { closeModal(); callback(); };
+    }
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ═══════════════ Toast ═══════════════
+let toastTimer;
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// ═══════════════ 启动 ═══════════════
+init();
+</script>
+</body>
+</html>
